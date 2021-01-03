@@ -12,6 +12,11 @@ const app = express();
 const server = http.createServer(app);
 const io = socketIo(server);
 
+// Point to index.html file when localhost:3000 loaded in browser
+app.get("/", (req, res) => {
+  res.sendFile(path.resolve(__dirname, "../client/index.html"));
+});
+
 // Define URLs and stream rules
 const rulesURL = "https://api.twitter.com/2/tweets/search/stream/rules";
 const streamURL =
@@ -82,7 +87,7 @@ async function deleteRules(rules) {
 
 // GET TWEET STREAM
 
-function streamTweets() {
+function streamTweets(socket) {
   const stream = needle.get(streamURL, {
     headers: {
       Authorization: `Bearer ${TOKEN}`,
@@ -93,39 +98,39 @@ function streamTweets() {
     try {
       // Data returned is a buffer so need to parse to JSON
       const json = JSON.parse(data);
-      console.log(json);
+
+      // Emit event to client via socket.io - pass in json
+      socket.emit("tweet", json);
 
       // Leave error catch empty to keep connection open
     } catch (error) {}
   });
 }
 
-io.on("connection", () => {
+// Socket.io - runs as soon as connected
+io.on("connection", async () => {
   console.log("Client connected...");
+
+  let currentRules;
+
+  try {
+    // Get all existing rules
+    currentRules = await getRules();
+
+    // Delete all existing rules
+    await deleteRules(currentRules);
+
+    // Set new rules based on array above
+    await setRules();
+
+    //
+  } catch (error) {
+    console.error(error);
+    process.exit(1);
+  }
+
+  streamTweets(io);
 });
-
-// // Runs immediately after server started
-// (async () => {
-//   let currentRules;
-
-//   try {
-//     // Get all existing rules
-//     currentRules = await getRules();
-
-//     // Delete all existing rules
-//     await deleteRules(currentRules);
-
-//     // Set new rules based on array above
-//     await setRules();
-
-//     //
-//   } catch (error) {
-//     console.error(error);
-//     process.exit(1);
-//   }
-
-//   streamTweets();
-// })();
 
 // Tell server to listen to port specified earlier
 server.listen(PORT, () => console.log(`Listening on port ${PORT}`));
