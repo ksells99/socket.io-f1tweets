@@ -1,12 +1,25 @@
+const http = require("http");
+const path = require("path");
+const express = require("express");
+const socketIo = require("socket.io");
 const needle = require("needle");
 const config = require("dotenv").config();
 const TOKEN = process.env.TWITTER_BEARER_TOKEN;
+const PORT = process.env.PORT || 3000;
 
+const app = express();
+
+const server = http.createServer(app);
+const io = socketIo(server);
+
+// Define URLs and stream rules
 const rulesURL = "https://api.twitter.com/2/tweets/search/stream/rules";
 const streamURL =
   "https://api.twitter.com/2/tweets/search/stream?tweet.fields=public_metrics&expansions=author_id";
 
 const rules = [{ value: "f1" }];
+
+// STREAM RULE FUNCTIONS
 
 // Get stream rules
 async function getRules() {
@@ -67,6 +80,8 @@ async function deleteRules(rules) {
   return response.body;
 }
 
+// GET TWEET STREAM
+
 function streamTweets() {
   const stream = needle.get(streamURL, {
     headers: {
@@ -85,25 +100,32 @@ function streamTweets() {
   });
 }
 
-// Runs immediately after server started
-(async () => {
-  let currentRules;
+io.on("connection", () => {
+  console.log("Client connected...");
+});
 
-  try {
-    // Get all existing rules
-    currentRules = await getRules();
+// // Runs immediately after server started
+// (async () => {
+//   let currentRules;
 
-    // Delete all existing rules
-    await deleteRules(currentRules);
+//   try {
+//     // Get all existing rules
+//     currentRules = await getRules();
 
-    // Set new rules based on array above
-    await setRules();
+//     // Delete all existing rules
+//     await deleteRules(currentRules);
 
-    //
-  } catch (error) {
-    console.error(error);
-    process.exit(1);
-  }
+//     // Set new rules based on array above
+//     await setRules();
 
-  streamTweets();
-})();
+//     //
+//   } catch (error) {
+//     console.error(error);
+//     process.exit(1);
+//   }
+
+//   streamTweets();
+// })();
+
+// Tell server to listen to port specified earlier
+server.listen(PORT, () => console.log(`Listening on port ${PORT}`));
