@@ -3,10 +3,28 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>F1 Tweets - Realtime stream</title>
+    <link
+      rel="stylesheet"
+      href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css"
+      integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh"
+      crossorigin="anonymous"
+    />
+    <script
+      src="https://kit.fontawesome.com/c159863e43.js"
+      crossorigin="anonymous"
+    ></script>
+    <title>F1 Tweets - Real-time stream</title>
   </head>
   <body>
-    <h1>Hello</h1>
+    <nav class="navbar navbar-dark bg-dark">
+      <div class="container">
+        <a href="#" class="navbar-brand">F1 RealTime Tweets</a>
+      </div>
+    </nav>
+
+    <div class="container">
+      <div id="tweetStream"></div>
+    </div>
 
     <!-- Socket.io CDN -->
     <script
@@ -16,15 +34,45 @@
     ></script>
 
     <script>
+      // Get tweetStream div from HTML
+      const tweetStream = document.getElementById("tweetStream");
+
       const socket = io();
+      const tweets = [];
 
       socket.on("connect", () => {
         console.log("Connected to server");
       });
 
-      //   Listen for tweet event emitted by server (streamTweets function)
+      //   Listen for new tweet event emitted by server (streamTweets function)
       socket.on("tweet", (tweet) => {
         console.log(tweet);
+
+        //   Create new object based on tweet data
+        const newTweetData = {
+          id: tweet.data.id,
+          text: tweet.data.text,
+          username: `@${tweet.includes.users[0].username}`,
+        };
+
+        // Create new div & styling for new tweet
+        const newTweetEl = document.createElement("div");
+        newTweetEl.className = "card my-4";
+        newTweetEl.innerHTML = `
+        <div class='card-body'>
+            <h5 class='card-title'>${newTweetData.text}</h5>
+            <h6 class='card-subtitle mb-2 text-muted'>${newTweetData.username}</h6>
+            <a class="btn btn-primary mt-3" href="https://twitter.com/${newTweetData.username}/status/${newTweetData.id}"
+            <i class="fab fa-twitter"></i> Go to Tweet
+            </a>
+        </div>
+        `;
+
+        // Add this new div to HTML
+        tweetStream.appendChild(newTweetEl);
+
+        // Then delete it after 20s
+        setTimeout(() => newTweetEl.remove(), 20000);
       });
     </script>
   </body>
